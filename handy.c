@@ -12,8 +12,9 @@
 extern void GPIOJ_Handler();
 
 
-void __error__(char *pcFilename, uint32_t ui32Line)
-{
+void error_(char *pcFilename, uint32_t ui32Line) {
+
+	DISABLE_IRQ();
     while(1);
 }
 

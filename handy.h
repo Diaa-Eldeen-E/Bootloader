@@ -29,12 +29,25 @@
 
 
 
-// The error routine that is called if the driver library encounters an error.
-//#ifdef DEBUG
-void __error__(char *pcFilename, uint32_t ui32Line);
+
+// Assert for debugging
+#ifdef DEBUG
+#define ASSERT_TRUE(expr)	if(!(expr))	__BKPT()
+
+// Assert for release
+#else
+#define ASSERT_TRUE(expr)		((expr) ? (void)0 : error_(__FILE__, __LINE__))
+#endif
 
 
-//#endif
+// Assert handlers for release
+void error_(char *pcFilename, uint32_t ui32Line);
+
+
+#define __BKPT()		__asm("bkpt	#5")
+#define DISABLE_IRQ()		__asm(" cpsid	 i")
+#define ENABLE_IRQ()		__asm(" cpsie	 i")
+
 
 #define LED1_ON		GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, GPIO_PIN_1);
 #define LED1_OFF	GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, 0);
