@@ -17,6 +17,10 @@
 
 
 
+#define FLASH_BASE_	0x2000
+#define FLASH_TOP_	0xFFFFC
+
+
 void command_help(char* bfr);
 void process_CLI_command();
 

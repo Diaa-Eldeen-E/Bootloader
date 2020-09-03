@@ -15,7 +15,7 @@
 
 
 //#define MAX_COMMAND_LEN             (10)
-#define COMMAND_TABLE_SIZE          (5)
+#define COMMAND_TABLE_SIZE          (6)
 
 
 
@@ -26,8 +26,9 @@ void command_help(char* bfr) {
 	UART_put_strLine("[Help] for commands list");
 	UART_put_strLine("[LED_ON] for turning on the LED");
 	UART_put_strLine("[LED_OFF] for turning off the LED");
-	UART_put_strLine("[Erase] to erase a sector");
-	UART_put_strLine("[Write] to write to a location in flash");
+	UART_put_strLine("[Erase [address] to erase a sector");
+	UART_put_strLine("[Write [address] [data] to write to a location in flash");
+	UART_put_strLine("[Read [address] to read to a location from flash");
 
 }
 
@@ -42,16 +43,21 @@ void command_LED_OFF(char* bfr) {
 
 void command_FLASH_ERASE(char* bfr) {
 
-	char addr[4];
-	int8_t i,j;
-	for(i=3, j=0; i>=0; --i, j++) {
-		addr[j] = bfr[i];
-	}
+	// Convert the address from string to long int
+	int32_t addr = strtol(bfr, &bfr, 16);
 
 	// Assert valid address
+	if(addr >= FLASH_TOP_ || addr < FLASH_BASE_) {	// Flash rejoin
+		UART_put_strLine("The entered flash address is out of bounds");
+		return;
+	}
+	if(addr % 16384 != 0) {	// 16 KB aligned address
+		UART_put_strLine("The entered flash address is not 16 KB aligned");
+		return;
+	}
 
 	//Write address
-	FLASH_FMA_R = *(uint32_t*) addr;
+	FLASH_FMA_R = addr;
 
 	//Write key to FMC and enable the erase bit
 	FLASH_FMC_R = FLASH_FMC_WRKEY | FLASH_FMC_ERASE;
@@ -60,31 +66,24 @@ void command_FLASH_ERASE(char* bfr) {
 	while(FLASH_FMC_R & FLASH_FMC_ERASE);
 }
 
+
 void command_FLASH_WRITE(char* bfr){
 
-	//convert from array to int
+	// Extract the address and data in integer form
+	int32_t addr = strtol(bfr, &bfr, 16);
+	int32_t data = strtol(bfr, &bfr, 16);
 
-	char addr[4];
-	char data[4];
-	int8_t i,j;
-	for(i=3, j=0; i>=0; --i, j++) {
-		addr[j] = bfr[i];
-		data[j] = bfr[i+5];
+	// Assert valid address
+	if(addr >= FLASH_TOP_ || addr < FLASH_BASE_) {	// Flash rejoin
+		UART_put_strLine("The entered flash address is out of bounds");
+		return;
 	}
 
-	char* rem;
-	// Assert valid address
-	int32_t a = strtol(bfr, &rem, 16);
-	int32_t d = strtol(rem, &rem, 16);
 	// Write data
-//	FLASH_FMD_R = *(uint32_t*) data;
-//	FLASH_FMD_R = atol(&bfr[4]);
-	FLASH_FMD_R = d;
+	FLASH_FMD_R = data;
 
 	//Write address
-//	FLASH_FMA_R = *(uint32_t*) addr;
-//	FLASH_FMA_R = atol(bfr);
-	FLASH_FMA_R = a;
+	FLASH_FMA_R = addr;
 
 	//Write key to FMC and enable the erase bit
 	FLASH_FMC_R = FLASH_FMC_WRKEY | FLASH_FMC_WRITE;
@@ -94,20 +93,36 @@ void command_FLASH_WRITE(char* bfr){
 }
 
 
+void command_FLASH_READ(char* bfr) {
+
+	// Extract the address in integer form
+	int32_t addr = strtol(bfr, &bfr, 16);
+
+	// Assert valid address
+	if(addr >= FLASH_TOP_ || addr < FLASH_BASE_) {	// Flash rejoin
+		UART_put_strLine("The entered flash address is out of bounds");
+		return;
+	}
+
+	UART_send_uintL(* (uint32_t*) addr);
+}
+
+
 typedef struct
 {
     char const    *name;
     void          (*function)(char*);
 } command_t;
 
-command_t const gCommandTable[COMMAND_TABLE_SIZE] =
+command_t const gCommandTable[] =
 {
     {"HELP",    command_help,},
     {"LED_ON",     command_LED_ON, },
     {"LED_OFF",  command_LED_OFF, },
 	{"ERASE",	command_FLASH_ERASE},
-	{"WRITE",	command_FLASH_WRITE}
-//    {NULL,      NULL }
+	{"WRITE",	command_FLASH_WRITE},
+	{"READ",	command_FLASH_READ},
+    {NULL,      NULL }
 };
 
 
@@ -131,7 +146,7 @@ void process_CLI_command() {
 	command[i] = '\0';
 	count = i;
 
-	for(i=0; i< COMMAND_TABLE_SIZE; ++i) {
+	for(i=0; gCommandTable[i].name != NULL; ++i) {
 
 		if(!strcmp(command, gCommandTable[i].name)) {	//compare it with defined commands
 
@@ -139,7 +154,7 @@ void process_CLI_command() {
 			gCommandTable[i].function(&bfr[count+1]);		//Perform the corresponding function
 			done = 1;
 			UART_put_string(command);
-			UART_put_strLine(" Process success");
+			UART_put_strLine(" command done");
 		}
 
 	}
