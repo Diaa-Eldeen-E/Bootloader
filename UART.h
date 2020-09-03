@@ -31,7 +31,10 @@
 #include "handy.h"
 
 
+
 uint8_t UART_receive_line(char* bfr, uint8_t bfrSize);
+void UART_send_uintL(uint32_t number);
+void UART_send_uint(uint32_t number);
 void UART_put_strLine(char* str);
 void UART_put_string(char* str);
 void UART0_init_interrupts();

@@ -21,7 +21,7 @@ uint8_t UART_receive_line(char* bfr, uint8_t bfrSize){
 	for (i =0; i<bfrSize+2; i++) {
 
 		receivedChar = UARTCharGet(UART0_BASE);
-		ASSERT(UARTRxErrorGet(UART0_BASE) == 0);	//error checking
+		ASSERT_TRUE(UARTRxErrorGet(UART0_BASE) == 0);	//error checking
 
 		if (receivedChar =='\r' || receivedChar == '\n'){
 			bfr[i] = '\0';
@@ -39,6 +39,27 @@ uint8_t UART_receive_line(char* bfr, uint8_t bfrSize){
 	}
 
 	return 0;
+}
+
+
+
+/* Send a 4 bytes unsigned integer
+ * and then end the line with (\n)
+ */
+void UART_send_uintL(uint32_t number) {
+
+	UART_send_uint(number);
+	UARTCharPut(UART0_BASE, '\n');
+}
+
+
+// Send a 4 bytes unsigned integer
+void UART_send_uint(uint32_t number) {
+
+	char intNum_String [11];
+	utoa(number,intNum_String,10);
+
+	UART_put_string(intNum_String);
 }
 
 
