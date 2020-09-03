@@ -46,24 +46,7 @@ void command_FLASH_ERASE(char* bfr) {
 	// Convert the address from string to long int
 	int32_t addr = strtol(bfr, &bfr, 16);
 
-	// Assert valid address
-	if(addr >= FLASH_TOP_ || addr < FLASH_BASE_) {	// Flash rejoin
-		UART_put_strLine("The entered flash address is out of bounds");
-		return;
-	}
-	if(addr % 16384 != 0) {	// 16 KB aligned address
-		UART_put_strLine("The entered flash address is not 16 KB aligned");
-		return;
-	}
-
-	//Write address
-	FLASH_FMA_R = addr;
-
-	//Write key to FMC and enable the erase bit
-	FLASH_FMC_R = FLASH_FMC_WRKEY | FLASH_FMC_ERASE;
-
-	// Poll for the erase bit
-	while(FLASH_FMC_R & FLASH_FMC_ERASE);
+	FlashErase(addr);
 }
 
 
@@ -71,25 +54,9 @@ void command_FLASH_WRITE(char* bfr){
 
 	// Extract the address and data in integer form
 	int32_t addr = strtol(bfr, &bfr, 16);
-	int32_t data = strtol(bfr, &bfr, 16);
+	uint32_t data = strtol(bfr, &bfr, 16);
 
-	// Assert valid address
-	if(addr >= FLASH_TOP_ || addr < FLASH_BASE_) {	// Flash rejoin
-		UART_put_strLine("The entered flash address is out of bounds");
-		return;
-	}
-
-	// Write data
-	FLASH_FMD_R = data;
-
-	//Write address
-	FLASH_FMA_R = addr;
-
-	//Write key to FMC and enable the erase bit
-	FLASH_FMC_R = FLASH_FMC_WRKEY | FLASH_FMC_WRITE;
-
-	// Poll for the erase bit
-	while(FLASH_FMC_R & FLASH_FMC_WRITE);
+	FlashProgram(&data, addr, sizeof(uint32_t) * 1);
 }
 
 
