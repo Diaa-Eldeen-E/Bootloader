@@ -26,6 +26,7 @@
 #include "driverlib/pin_map.h"
 #include "inc/tm4c1294ncpdt.h"
 #include "inc/hw_types.h"
+#include "inc/hw_flash.h"
 #include "driverlib/timer.h"
 
 
