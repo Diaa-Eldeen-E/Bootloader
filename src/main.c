@@ -48,7 +48,7 @@ int main(){
 			process_CLI_command();
 		}
 		else{
-//			LED_EK_blink(200);
+			LED_EK_blink(200);
 		}
 
 
