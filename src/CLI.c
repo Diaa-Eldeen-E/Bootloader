@@ -26,6 +26,8 @@ void command_help(char* bfr) {
 	UART_put_strLine("[Write [address] [data]] to write to a location in flash");
 	UART_put_strLine("[Read [address]] to read to a location from flash");
 	UART_put_strLine("[Write_Protection [address]] Sets a 2 KB block at this address to read only");
+	UART_put_strLine("[PROG] to flash a hex file to the MCU");
+	UART_put_strLine("[Jump] to run the loaded flash hex file");
 
 }
 
@@ -105,6 +107,83 @@ void command_FLASH_WriteProtection(char* bfr) {
 }
 
 
+uint8_t pui8RxBuffer[20000] __attribute((aligned(1024)));
+//
+void command_ReceiveBin(char* bfr)
+{
+	// Extract the size in integer form
+	uint32_t size = strtol(bfr, &bfr, 10);
+
+	// Assert valid address
+//	if(addr >= FLASH_TOP_ || addr < FLASH_BASE_) {	// Flash rejoin
+//		UART_put_strLine("The entered flash address is out of bounds");
+//		return;
+//	}
+
+	// Receive data
+
+	char receivedChar =0;
+	uint32_t i = 0;
+//	while(1) {
+	for(i=0; i<size; ++i)
+	{
+		receivedChar = UARTCharGet(UART0_BASE);
+		pui8RxBuffer[i] = receivedChar;
+	}
+
+
+
+
+
+
+}
+
+
+
+
+
+#define __set_MSP(topOfMainStack)	\
+{	\
+	__asm("MSR msp, %0" : : "r" (topOfMainStack) : );	\
+}
+
+void command_Jump(char* bfr)
+{
+	// Take addr where to jump
+
+	uint32_t addr = (uint32_t) pui8RxBuffer;
+	uint32_t ui32MSP = * (uint32_t*) addr;
+
+	// Check valid stack pointer
+
+	// uninitialization
+	// Disable interrupts
+	// Reset GPIO and UART
+	// Reset RCC
+	// Reset config register
+	// Disable PLL
+
+	// Reallocate vector table if the addr is not 0
+	if(addr % 1024 != 0)
+		while(1);
+
+	NVIC_VTABLE_R = addr;
+
+
+
+	void (*jump_address)(void) = (void*)(*((uint32_t*)(addr+4)));
+	// copy addr to MSP
+	__set_MSP(ui32MSP);
+
+	// Jump to addr + 4
+	jump_address();
+
+
+	while(1);
+}
+
+
+
 typedef struct
 {
     char const    *name;
@@ -120,6 +199,8 @@ command_t const gCommandTable[] =
 	{"WRITE",	command_FLASH_WRITE},
 	{"READ",	command_FLASH_READ},
 	{"WRITE_PROTECTION",	command_FLASH_WriteProtection},
+	{"PROG",	command_ReceiveBin},
+	{"JUMP",	command_Jump},
     {NULL,      NULL }
 };
 
