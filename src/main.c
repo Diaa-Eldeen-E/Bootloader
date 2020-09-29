@@ -21,7 +21,7 @@ uint32_t F_SysClk = 82000000;
 
 
 extern char bfr[];
-extern _Bool newOp;
+extern volatile _Bool newOp;
 
 
 
