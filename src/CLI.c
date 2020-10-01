@@ -154,9 +154,33 @@ void command_ReceiveBin(char* bfr)
 
 
 	// Erase flash
+	uint32_t ui32NoOfSectors = (uint32_t) &__app0rom_size / 16384; // Divide by 16K
+
+	for(i=0; i<ui32NoOfSectors; ++i)
+	{
+		if(FlashErase(ui32Addr + 16384 * i))
+		{
+			UART_put_strLine("Sector Erasing error");
+			FlashClearErrors();
+			return;
+		}
+		else
+		{
+			// Success
+		}
+	}
 
 	// Write to flash
-//	FlashProgramBuffering((uint32_t*) pui8RxBuffer, APP_ADDRESS, size/4);
+	if( FlashProgramBuffering((uint32_t*) pui8RxBuffer, ui32Addr, ui32Size) )
+	{
+		UART_put_strLine("Flash programming error");
+		FlashClearErrors();
+		return;
+	}
+	else
+	{
+		// Success
+	}
 
 
 }
@@ -174,7 +198,7 @@ void command_Jump(char* bfr)
 {
 	// Take addr where to jump
 
-	uint32_t addr = (uint32_t) __app0rom_start;
+	uint32_t addr = (uint32_t) &__app0rom_start;
 	uint32_t ui32MSP = * (uint32_t*) addr;
 
 	// Check valid stack pointer
