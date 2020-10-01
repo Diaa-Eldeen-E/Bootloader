@@ -305,3 +305,16 @@ void process_CLI_command() {
 	UARTIntEnable(UART0_BASE, UART_INT_RX);
 }
 
+
+
+void UART0_Handler(){
+
+	if(UART_receive_line(bfr, 40))	//UARTCharGet automatically clears the interrupt
+		UART_put_strLine("Error, too long string, try again");	//buffer overflow
+	else{
+//		UART_put_strLine(bfr);
+		newOp =1;
+	}
+
+//	IntPendClear(INT_UART0);	// Gets already cleared by UARTGetChar function
+}
