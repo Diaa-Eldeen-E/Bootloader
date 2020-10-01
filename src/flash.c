@@ -68,7 +68,7 @@ int32_t FlashProgram(uint32_t *pui32Data, uint32_t ui32Address, uint32_t ui32Cou
 		//Write key to FMC and enable the erase bit
 		FLASH_FMC_R = FLASH_FMC_WRKEY | FLASH_FMC_WRITE;
 
-		// Poll for the erase bit
+		// Poll for the writing bit
 		while(FLASH_FMC_R & FLASH_FMC_WRITE);
 
 		ui32Count -=4;
@@ -108,24 +108,25 @@ int32_t FlashProgramBuffering(uint32_t *pui32Data, uint32_t ui32Address, uint32_
 
 		FLASH_FMA_R = ui32PageAddress;	// Must be page (128 byte) aligned
 
-		// Write data
+		// Write a 32-word page to the flash memory buffer registers
 		while( (ui32RegOffSet < 128) && (ui32Count) )
 		{
 			HWREG(FLASH_FWBN + ui32RegOffSet) = pui32Data[i];
-
-			//Write key to FMC2 and enable the buffered flash write
-			FLASH_FMC2_R = FLASH_FMC_WRKEY | FLASH_FMC2_WRBUF;
-
-			// Poll for the erase bit
-			while(FLASH_FMC2_R & FLASH_FMC2_WRBUF);
 
 			ui32Count -=4;
 			ui32RegOffSet += 4;
 			i++;
 		}
 
+		// Start the buffered flash write
+		FLASH_FMC2_R = FLASH_FMC_WRKEY | FLASH_FMC2_WRBUF;
+
+		// Poll for the buffering write bit
+		while(FLASH_FMC2_R & FLASH_FMC2_WRBUF);
+
 		ui32Address += ui32RegOffSet;
 	}
+
 
 
 	// Check errors
