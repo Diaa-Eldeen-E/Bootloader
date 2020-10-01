@@ -6,11 +6,17 @@
  *
  *****************************************************************************/
 
+/*INCLUDE D:\Courses\Workspace\CodeComposer\Bootloader\memory_map.lds*/
+
+/*
 MEMORY
 {
     FLASH (RX) : ORIGIN = 0x00000000, LENGTH = 0x00100000
     SRAM (WX)  : ORIGIN = 0x20000000, LENGTH = 0x00040000
 }
+*/
+
+REGION_ALIAS("FLASH", BL_ROM);
 
 REGION_ALIAS("REGION_TEXT", FLASH);
 REGION_ALIAS("REGION_BSS", SRAM);
