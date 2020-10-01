@@ -124,7 +124,7 @@ int32_t FlashProgramBuffering(uint32_t *pui32Data, uint32_t ui32Address, uint32_
 			i++;
 		}
 
-
+		ui32Address += ui32RegOffSet;
 	}
 
 
