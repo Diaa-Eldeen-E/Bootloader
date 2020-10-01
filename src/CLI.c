@@ -108,24 +108,43 @@ void command_FLASH_WriteProtection(char* bfr) {
 
 
 uint8_t pui8RxBuffer[20000] __attribute((aligned(1024)));
+
+
+extern uint32_t __app0rom_start;
+extern uint32_t __app0rom_size;
+
+
 //
 void command_ReceiveBin(char* bfr)
 {
-	// Extract the size in integer form
-	uint32_t size = strtol(bfr, &bfr, 10);
+	// Extract the address and size in integer form
+	uint32_t ui32Addr = strtol(bfr, &bfr, 10);
+	uint32_t ui32Size = strtol(bfr, &bfr, 10);
 
-	// Assert valid address
-//	if(addr >= FLASH_TOP_ || addr < FLASH_BASE_) {	// Flash rejoin
-//		UART_put_strLine("The entered flash address is out of bounds");
-//		return;
-//	}
+
+	// Check valid address and size
+	if(ui32Addr != (uint32_t) &__app0rom_start)
+	{
+		UART_put_strLine("The image flashing address is not valid");
+		UART_send_uintL(__app0rom_start);
+		return;
+	}
+
+	if(ui32Size >= (uint32_t) &__app0rom_size)
+	{
+		UART_put_strLine("No enough space for the image");
+		return;
+	}
+
 
 	// Receive data
 
+	UART_put_strLine("Receiving the application image");
+
 	char receivedChar =0;
 	uint32_t i = 0;
-//	while(1) {
-	for(i=0; i<size; ++i)
+
+	for(i=0; i<ui32Size; ++i)
 	{
 		receivedChar = UARTCharGet(UART0_BASE);
 		pui8RxBuffer[i] = receivedChar;
@@ -134,6 +153,10 @@ void command_ReceiveBin(char* bfr)
 
 
 
+	// Erase flash
+
+	// Write to flash
+//	FlashProgramBuffering((uint32_t*) pui8RxBuffer, APP_ADDRESS, size/4);
 
 
 }
@@ -151,7 +174,7 @@ void command_Jump(char* bfr)
 {
 	// Take addr where to jump
 
-	uint32_t addr = (uint32_t) pui8RxBuffer;
+	uint32_t addr = (uint32_t) __app0rom_start;
 	uint32_t ui32MSP = * (uint32_t*) addr;
 
 	// Check valid stack pointer
@@ -217,21 +240,30 @@ _Bool done =0;
 
 void process_CLI_command() {
 
+	// Disable receiving commands until the current command is processed
+	UARTIntDisable(UART0_BASE, UART_INT_RX);
+
 	char command[40];
 	uint32_t i =0, count;
+
 	for(i=0; bfr[i] != '\0' && bfr[i] != ' ' ; ++i)
-		command[i] = to_upper(bfr[i]);	//convert all to upper case
+		command[i] = to_upper(bfr[i]);	// Convert all to upper case
 
 	command[i] = '\0';
 	count = i;
 
-	for(i=0; gCommandTable[i].name != NULL; ++i) {
-
-		if(!strcmp(command, gCommandTable[i].name)) {	//compare it with defined commands
+	// Search the command in the lookup commands table
+	for(i=0; gCommandTable[i].name != NULL; ++i)
+	{
+		if(!strcmp(command, gCommandTable[i].name))
+		{
+			//Perform the corresponding function
+			gCommandTable[i].function(&bfr[count+1]);
 
 			newOp = 0;
-			gCommandTable[i].function(&bfr[count+1]);		//Perform the corresponding function
 			done = 1;
+
+			// Command success message
 			UART_put_string(command);
 			UART_put_strLine(" command done");
 		}
@@ -244,5 +276,8 @@ void process_CLI_command() {
 
 	newOp =0;
 	done =0;
+
+	// Enable receiving commands
+	UARTIntEnable(UART0_BASE, UART_INT_RX);
 }
 
