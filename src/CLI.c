@@ -107,7 +107,7 @@ void command_FLASH_WriteProtection(char* bfr) {
 }
 
 
-uint8_t pui8RxBuffer[20000] __attribute((aligned(1024)));
+uint8_t pui8RxBuffer[20000];
 
 
 extern uint32_t __app0rom_start;
@@ -187,38 +187,55 @@ void command_ReceiveBin(char* bfr)
 
 
 
-
+extern uint32_t SRAM_END;
+extern uint32_t SRAM_START;
 
 #define __set_MSP(topOfMainStack)	\
 {	\
 	__asm("MSR msp, %0" : : "r" (topOfMainStack) : );	\
 }
 
+
 void command_Jump(char* bfr)
 {
-	// Take addr where to jump
-
-	uint32_t addr = (uint32_t) &__app0rom_start;
-	uint32_t ui32MSP = * (uint32_t*) addr;
+	uint32_t ui32addr = (uint32_t) &__app0rom_start;
+	uint32_t ui32MSP = * (uint32_t*) ui32addr;
 
 	// Check valid stack pointer
+	ASSERT_TRUE(ui32MSP > (uint32_t) &SRAM_START && ui32MSP <= (uint32_t) &SRAM_END);
 
-	// uninitialization
+	// Reallocate the vector table the application location
+	ASSERT_TRUE(ui32addr % 1024 == 0);
+	NVIC_VTABLE_R = ui32addr;
+
+	void (*jump_address)(void) = (void*)(*((uint32_t*)(ui32addr+4)));
+
+	// Uninitialization
+
 	// Disable interrupts
-	// Reset GPIO and UART
-	// Reset RCC
-	// Reset config register
-	// Disable PLL
+	IntMasterDisable();
 
-	// Reallocate vector table if the addr is not 0
-	if(addr % 1024 != 0)
-		while(1);
+	// Reset GPIO
+	SYSCTL_SRGPIO_R = 0xffff;
+	SYSCTL_SRGPIO_R = 0;
 
-	NVIC_VTABLE_R = addr;
+	// Reset UART
+	SYSCTL_SRUART_R = 0xffff;
+	SYSCTL_SRUART_R = 0;
 
+	// Reset Timer
+	SYSCTL_SRTIMER_R = 0xffff;
+	SYSCTL_SRTIMER_R = 0;
 
+	// Reset system control and clock settings
+	SYSCTL_MISC_R = 0xffff;	// Clear system control interrupt flags
+	SYSCTL_MOSCCTL_R = 0x000C;	// Reset value
+	SYSCTL_MEMTIM0_R = 0x00300030;	// Reset value
+	SYSCTL_PLLFREQ0_R = 0;	// Reset value
+	SYSCTL_PLLFREQ1_R = 0;	// Reset value
+	SYSCTL_RSCLKCFG_R = 0;	// Reset value
+	SYSCTL_DIVSCLK_R = 0;	// Reset value
 
-	void (*jump_address)(void) = (void*)(*((uint32_t*)(addr+4)));
 	// copy addr to MSP
 	__set_MSP(ui32MSP);
 
