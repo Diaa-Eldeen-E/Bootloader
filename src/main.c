@@ -11,23 +11,15 @@
 
 #include "UART.h"
 
-
-
 #include "CLI.h"
 
 
 uint32_t F_SysClk = 82000000;
 
 
-
-extern char bfr[];
 extern volatile _Bool newOp;
 
-
-
 int main(){
-	uint32_t i = 1;
-
 
 	F_SysClk = SysCtlClockFreqSet(SYSCTL_USE_PLL | SYSCTL_CFG_VCO_480
 									| SYSCTL_XTAL_25MHZ | SYSCTL_OSC_MAIN, F_SysClk);
