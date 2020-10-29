@@ -9,9 +9,14 @@
 #include "CLI.h"
 
 
-
-
 #define to_upper(c)		(c >= 'a' && c <= 'z') ? c-'a'+'A' : c
+
+
+typedef struct
+{
+    char const    *name;
+    void          (*function)(char*);
+} command_t;
 
 
 
@@ -26,14 +31,15 @@ void command_help(char* bfr) {
 	UART_put_strLine("[Write [address] [data]] to write to a location in flash");
 	UART_put_strLine("[Read [address]] to read to a location from flash");
 	UART_put_strLine("[Write_Protection [address]] Sets a 2 KB block at this address to read only");
-	UART_put_strLine("[PROG] to flash a hex file to the MCU");
-	UART_put_strLine("[Jump] to run the loaded flash hex file");
+	UART_put_strLine("[PROG [address] [size]] to flash a hex file to the MCU");
+	UART_put_strLine("[Jump [address]] to jump to the specified address");
 
 }
 
 void command_LED_ON(char* bfr) {
 	LED4_ON;
 }
+
 
 void command_LED_OFF(char* bfr) {
 	LED4_OFF;
@@ -107,152 +113,77 @@ void command_FLASH_WriteProtection(char* bfr) {
 }
 
 
-uint8_t pui8RxBuffer[20000];
+uint8_t pui8RxBuffer[65536];	// 64 KB
 
 
-extern uint32_t __app0rom_start;
-extern uint32_t __app0rom_size;
-
-
-//
 void command_ReceiveBin(char* bfr)
 {
 	// Extract the address and size in integer form
 	uint32_t ui32Addr = strtol(bfr, &bfr, 10);
 	uint32_t ui32Size = strtol(bfr, &bfr, 10);
 
-
-	// Check valid address and size
-	if(ui32Addr != (uint32_t) &__app0rom_start)
-	{
-		UART_put_strLine("The image flashing address is not valid");
-		UART_send_uintL(__app0rom_start);
-		return;
-	}
-
-	if(ui32Size >= (uint32_t) &__app0rom_size)
+	// Check enough memory for the image size
+	if(ui32Size >= sizeof(pui8RxBuffer)) //(uint32_t) &__app0rom_size)
 	{
 		UART_put_strLine("No enough space for the image");
 		return;
 	}
 
-
-	// Receive data
-
+	// Receive the image
 	UART_put_strLine("Receiving the application image");
-
 	char receivedChar =0;
 	uint32_t i = 0;
-
 	for(i=0; i<ui32Size; ++i)
 	{
 		receivedChar = UARTCharGet(UART0_BASE);
 		pui8RxBuffer[i] = receivedChar;
 	}
 
+	// Flash the image
+	uint32_t ui32RetCode;
+	ui32RetCode = BLDownloadImage((uint32_t*) pui8RxBuffer, ui32Addr, ui32Size);
 
-
-
-	// Erase flash
-	uint32_t ui32NoOfSectors = (uint32_t) &__app0rom_size / 16384; // Divide by 16K
-
-	for(i=0; i<ui32NoOfSectors; ++i)
+	switch (ui32RetCode)
 	{
-		if(FlashErase(ui32Addr + 16384 * i))
-		{
-			UART_put_strLine("Sector Erasing error");
-			FlashClearErrors();
-			return;
-		}
-		else
-		{
-			// Success
-		}
-	}
+	case Success:
+		UART_put_strLine("Download complete");
+		break;
 
-	// Write to flash
-	if( FlashProgramBuffering((uint32_t*) pui8RxBuffer, ui32Addr, ui32Size) )
-	{
+	case SectorEraseError:
+		UART_put_strLine("Sector erasing error");
+		break;
+
+	case FlashProgError:
 		UART_put_strLine("Flash programming error");
-		FlashClearErrors();
-		return;
-	}
-	else
-	{
-		// Success
-	}
+		break;
 
+	case Error:
+	default:
+		UART_put_strLine("Error downloading the image");
+		break;
+	}
 
 }
 
-
-
-extern uint32_t SRAM_END;
-extern uint32_t SRAM_START;
-
-#define __set_MSP(topOfMainStack)	\
-{	\
-	__asm("MSR msp, %0" : : "r" (topOfMainStack) : );	\
-}
 
 
 void command_Jump(char* bfr)
 {
-	uint32_t ui32addr = (uint32_t) &__app0rom_start;
-	uint32_t ui32MSP = * (uint32_t*) ui32addr;
+	// Extract the address in integer form
+	uint32_t ui32Addr = strtol(bfr, &bfr, 10);
 
-	// Check valid stack pointer
-	ASSERT_TRUE(ui32MSP > (uint32_t) &SRAM_START && ui32MSP <= (uint32_t) &SRAM_END);
+	uint32_t ui32RetCode;
+	ui32RetCode = BLJump(ui32Addr);
 
-	// Reallocate the vector table the application location
-	ASSERT_TRUE(ui32addr % 1024 == 0);
-	NVIC_VTABLE_R = ui32addr;
-
-	void (*jump_address)(void) = (void*)(*((uint32_t*)(ui32addr+4)));
-
-	// Uninitialization
-
-	// Disable interrupts
-	IntMasterDisable();
-
-	// Reset GPIO
-	SYSCTL_SRGPIO_R = 0xffff;
-	SYSCTL_SRGPIO_R = 0;
-
-	// Reset UART
-	SYSCTL_SRUART_R = 0xffff;
-	SYSCTL_SRUART_R = 0;
-
-	// Reset Timer
-	SYSCTL_SRTIMER_R = 0xffff;
-	SYSCTL_SRTIMER_R = 0;
-
-	// Reset system control and clock settings
-	SYSCTL_MISC_R = 0xffff;	// Clear system control interrupt flags
-	SYSCTL_MOSCCTL_R = 0x000C;	// Reset value
-	SYSCTL_MEMTIM0_R = 0x00300030;	// Reset value
-	SYSCTL_PLLFREQ0_R = 0;	// Reset value
-	SYSCTL_PLLFREQ1_R = 0;	// Reset value
-	SYSCTL_RSCLKCFG_R = 0;	// Reset value
-	SYSCTL_DIVSCLK_R = 0;	// Reset value
-
-	// copy addr to MSP
-	__set_MSP(ui32MSP);
-
-	// Jump to addr + 4
-	jump_address();
-
-
-	while(1);
+	switch (ui32RetCode)
+	{
+	case Error:
+	default:
+		UART_put_strLine("Jump failed");
+		break;
+	}
 }
 
-
-
-typedef struct
-{
-    char const    *name;
-    void          (*function)(char*);
-} command_t;
 
 command_t const gCommandTable[] =
 {
@@ -270,13 +201,9 @@ command_t const gCommandTable[] =
 
 
 
-
-
 char bfr[40];
-_Bool newOp =0;
-_Bool done =0;
-
-
+uint8_t newOp =0;
+uint8_t done =0;
 
 
 void process_CLI_command() {
@@ -324,14 +251,14 @@ void process_CLI_command() {
 
 
 
-void UART0_Handler(){
+void UART0_Handler()
+{
 
 	if(UART_receive_line(bfr, 40))	//UARTCharGet automatically clears the interrupt
 		UART_put_strLine("Error, too long string, try again");	//buffer overflow
-	else{
-//		UART_put_strLine(bfr);
+	else
 		newOp =1;
-	}
+
 
 //	IntPendClear(INT_UART0);	// Gets already cleared by UARTGetChar function
 }

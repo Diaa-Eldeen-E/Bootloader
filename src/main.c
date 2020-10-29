@@ -17,7 +17,7 @@
 uint32_t F_SysClk = 82000000;
 
 
-extern volatile _Bool newOp;
+extern volatile uint8_t newOp;
 
 int main(){
 
@@ -32,6 +32,16 @@ int main(){
 
 	command_help("");
 
+	// Even while the application is loading and performing its duties, it 
+	// should be designed so that it can accept a command to enter the boot-loader. 
+
+	// Check valid application
+
+	// If valid, start a timer with interrupt (0.5 sec and continue)
+	// Inside the timer interrupt set a global variable jumpToApp
+
+
+	// If not valid continue
 
 
 	while(1){
@@ -39,6 +49,7 @@ int main(){
 		if(newOp){
 			process_CLI_command();
 		}
+		// Else if jump to app jump then while(1)
 		else{
 			LED_EK_blink(200);
 		}
