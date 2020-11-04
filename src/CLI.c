@@ -9,49 +9,56 @@
 #include "CLI.h"
 
 
-#define to_upper(c)		(c >= 'a' && c <= 'z') ? c-'a'+'A' : c
-
-
-typedef struct
+// Register all the commands here
+// Function name (must be upper-case), Help message and Function pointer
+command_t const gCommandTable[] =
 {
-    char const    *name;
-    void          (*function)(char*);
-} command_t;
+    {"HELP", "[Help] List the available commands", command_help,},
+    {"LED_ON", "[LED_ON] Turn on the LED", command_LED_ON, },
+    {"LED_OFF", "[LED_OFF] Turn off the LED", command_LED_OFF, },
+	{"ERASE", "[Erase [address]] Erase the sector at [address]", command_FLASH_ERASE},
+	{"WRITE", "[Write [address] [data]] Write a word in flash",	command_FLASH_WRITE},
+	{"READ", "[Read [address]] Read a word from flash", command_FLASH_READ},
+	{"WRITE_PROTECTION", "[Write_Protection [address]] Set a 2 KB block at \
+			this address to read only",	command_FLASH_WriteProtection},
+	{"PROG", "[PROG [address] [size]] Flash a hex file to the MCU",	command_ReceiveBin},
+	{"JUMP", "[Jump [address]] Jump to the specified address", command_Jump},
+    {NULL,      NULL }
+};
 
 
+void command_help(char* bfr)
+{
+	UART_put_strLine("Available commands:");
 
-void command_help(char* bfr) {
-
-	UART_put_strLine("List of commands:");
-
-	UART_put_strLine("[Help] for commands list");
-	UART_put_strLine("[LED_ON] for turning on the LED");
-	UART_put_strLine("[LED_OFF] for turning off the LED");
-	UART_put_strLine("[Erase [address]] to erase a sector");
-	UART_put_strLine("[Write [address] [data]] to write to a location in flash");
-	UART_put_strLine("[Read [address]] to read to a location from flash");
-	UART_put_strLine("[Write_Protection [address]] Sets a 2 KB block at this address to read only");
-	UART_put_strLine("[PROG [address] [size]] to flash a hex file to the MCU");
-	UART_put_strLine("[Jump [address]] to jump to the specified address");
+	uint32_t i;
+	for(i=0; gCommandTable[i].pcName != NULL; ++i)
+	{
+		UART_put_strLine(gCommandTable[i].pcHelp);
+	}
 
 }
 
-void command_LED_ON(char* bfr) {
+
+void command_LED_ON(char* bfr)
+{
 	LED4_ON;
 }
 
 
-void command_LED_OFF(char* bfr) {
+void command_LED_OFF(char* bfr)
+{
 	LED4_OFF;
 }
 
 
-void command_FLASH_ERASE(char* bfr) {
+void command_FLASH_ERASE(char* bfr)
+{
 
-	// Convert the address from string to long int
-	int32_t addr = strtol(bfr, &bfr, 16);
+	// Extract the address in integer form
+	uint32_t ui32Addr = strtol(bfr, &bfr, 16);
 
-	if(FlashErase(addr))
+	if(FlashErase(ui32Addr))
 	{
 		UART_put_strLine("Sector Erasing error");
 		FlashClearErrors();
@@ -63,13 +70,14 @@ void command_FLASH_ERASE(char* bfr) {
 }
 
 
-void command_FLASH_WRITE(char* bfr){
+void command_FLASH_WRITE(char* bfr)
+{
 
 	// Extract the address and data in integer form
-	int32_t addr = strtol(bfr, &bfr, 16);
-	uint32_t data = strtol(bfr, &bfr, 16);
+	uint32_t ui32Addr = strtol(bfr, &bfr, 16);
+	uint32_t ui32Data = strtol(bfr, &bfr, 16);
 
-	if(FlashProgramBuffering(&data, addr, sizeof(uint32_t) * 1))
+	if(FlashProgramBuffering(&ui32Data, ui32Addr, sizeof(uint32_t) * 1))
 	{
 		UART_put_strLine("Flash programming error");
 		FlashClearErrors();
@@ -81,27 +89,29 @@ void command_FLASH_WRITE(char* bfr){
 }
 
 
-void command_FLASH_READ(char* bfr) {
+void command_FLASH_READ(char* bfr)
+{
 
 	// Extract the address in integer form
-	int32_t addr = strtol(bfr, &bfr, 16);
+	uint32_t ui32Addr = strtol(bfr, &bfr, 16);
 
 	// Assert valid address
-	if(addr >= FLASH_TOP_ || addr < FLASH_BASE_) {	// Flash rejoin
+	if(ui32Addr >= FLASH_TOP_ || ui32Addr < FLASH_BASE_) {	// Flash rejoin
 		UART_put_strLine("The entered flash address is out of bounds");
 		return;
 	}
 
-	UART_send_uintL(* (uint32_t*) addr);
+	UART_send_uintL(* (uint32_t*) ui32Addr);
 }
 
 
-void command_FLASH_WriteProtection(char* bfr) {
+void command_FLASH_WriteProtection(char* bfr)
+{
 
 	// Extract the address in integer form
-	int32_t addr = strtol(bfr, &bfr, 16);
+	uint32_t ui32Addr = strtol(bfr, &bfr, 16);
 
-	if(FlashProtectSet(addr, FlashReadOnly))
+	if(FlashProtectSet(ui32Addr, FlashReadOnly))
 	{
 		UART_put_strLine("Write protection setting error");
 		FlashClearErrors();
@@ -131,12 +141,12 @@ void command_ReceiveBin(char* bfr)
 
 	// Receive the image
 	UART_put_strLine("Receiving the application image");
-	char receivedChar =0;
+	char cReceivedChar =0;
 	uint32_t i = 0;
 	for(i=0; i<ui32Size; ++i)
 	{
-		receivedChar = UARTCharGet(UART0_BASE);
-		pui8RxBuffer[i] = receivedChar;
+		cReceivedChar = UARTCharGet(UART0_BASE);
+		pui8RxBuffer[i] = cReceivedChar;
 	}
 
 	// Flash the image
@@ -185,80 +195,3 @@ void command_Jump(char* bfr)
 }
 
 
-command_t const gCommandTable[] =
-{
-    {"HELP",    command_help,},
-    {"LED_ON",     command_LED_ON, },
-    {"LED_OFF",  command_LED_OFF, },
-	{"ERASE",	command_FLASH_ERASE},
-	{"WRITE",	command_FLASH_WRITE},
-	{"READ",	command_FLASH_READ},
-	{"WRITE_PROTECTION",	command_FLASH_WriteProtection},
-	{"PROG",	command_ReceiveBin},
-	{"JUMP",	command_Jump},
-    {NULL,      NULL }
-};
-
-
-
-char bfr[40];
-uint8_t newOp =0;
-uint8_t done =0;
-
-
-void process_CLI_command() {
-
-	// Disable receiving commands until the current command is processed
-	UARTIntDisable(UART0_BASE, UART_INT_RX);
-
-	char command[40];
-	uint32_t i =0, count;
-
-	for(i=0; bfr[i] != '\0' && bfr[i] != ' ' ; ++i)
-		command[i] = to_upper(bfr[i]);	// Convert all to upper case
-
-	command[i] = '\0';
-	count = i;
-
-	// Search the command in the lookup commands table
-	for(i=0; gCommandTable[i].name != NULL; ++i)
-	{
-		if(!strcmp(command, gCommandTable[i].name))
-		{
-			//Perform the corresponding function
-			gCommandTable[i].function(&bfr[count+1]);
-
-			newOp = 0;
-			done = 1;
-
-			// Command success message
-			UART_put_string(command);
-			UART_put_strLine(" command done");
-		}
-
-	}
-
-	if(!done) {
-		UART_put_strLine("Undefined command, [Help] to get some hints");
-	}
-
-	newOp =0;
-	done =0;
-
-	// Enable receiving commands
-	UARTIntEnable(UART0_BASE, UART_INT_RX);
-}
-
-
-
-void UART0_Handler()
-{
-
-	if(UART_receive_line(bfr, 40))	//UARTCharGet automatically clears the interrupt
-		UART_put_strLine("Error, too long string, try again");	//buffer overflow
-	else
-		newOp =1;
-
-
-//	IntPendClear(INT_UART0);	// Gets already cleared by UARTGetChar function
-}
