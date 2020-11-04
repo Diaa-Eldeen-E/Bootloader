@@ -37,8 +37,8 @@
 uint8_t UART_receive_line(char* bfr, uint8_t bfrSize);
 void UART_send_uintL(uint32_t number);
 void UART_send_uint(uint32_t number);
-void UART_put_strLine(char* str);
-void UART_put_string(char* str);
+void UART_put_strLine(const char* str);
+void UART_put_string(const char* str);
 void UART0_init_interrupts();
 
 void UART_put_PackedBCD(unsigned char DATA);

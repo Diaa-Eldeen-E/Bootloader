@@ -63,13 +63,13 @@ void UART_send_uint(uint32_t number) {
 }
 
 
-void UART_put_strLine(char* str){
+void UART_put_strLine(const char* str){
 	while(*str)	UARTCharPut(UART0_BASE, *str++);
 	UARTCharPut(UART0_BASE, '\n');
 }
 
 
-void UART_put_string(char* str){
+void UART_put_string(const char* str){
 	while(*str)	UARTCharPut(UART0_BASE, *str++);
 }
 
