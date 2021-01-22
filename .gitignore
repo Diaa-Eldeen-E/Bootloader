@@ -1,0 +1,19 @@
+#this ignores a certain folder any where
+.metadata/
+.tempFiles/
+.launches/
+.settings/
+Debug/
+Debug__GNU/
+Release/
+targetConfigs/
+_builds/
+# ---------------------------------------------------------
+
+#this ignores all matching files
+*.workspace
+*.xml
+*.ccxml
+*.ccsproject
+*.cproject
+*.project
