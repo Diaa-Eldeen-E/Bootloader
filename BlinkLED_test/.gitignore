@@ -1,0 +1,6 @@
+#this ignores all matching files
+*.o
+*.out
+*.hex
+*.map
+
