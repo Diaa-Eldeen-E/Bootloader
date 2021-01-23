@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Nov  4 13:37:18 2020
+Created on Thu Sep 17 14:39:54 2020
 
 @author: Diaa Eldeen
 """
 
 
-import sys, serial, io, binascii, time, timeit
+import sys, serial, binascii, time, timeit
 
 from intelhex import IntelHex
 
 
-print("Booting")
+print("Sending the image")
 
 
 filename = "BlinkLED_test/main.hex"
@@ -26,9 +26,9 @@ content = ih.todict()
 
 addr = startAddr
 
-COMMAND_PROG = 'PROG '
-COMMAND_PROG_DONE = 'Download complete\n'
-COMMAND_JUMP = 'JUMP '
+COMMAND_PROG = b'PROG '
+COMMAND_PROG_DONE = b'Download complete\n'
+COMMAND_JUMP = b'JUMP '
 
 
 # open the port with those settings and close it after the with block
@@ -38,19 +38,15 @@ with serial.Serial(port = "COM3", baudrate=921600,
 
     startTm = time.time()
 
-    sio = io.TextIOWrapper(io.BufferedRWPair(serialPort, serialPort))
+    serialPort.write(b'\n')     # End any previous line
 
-    sio.write('\n')     # End any previous line
-
-    sio.write(COMMAND_PROG) 
-    sio.write(str(startAddr) + ' ') # Address
-    sio.write(str(maxAddr-startAddr+1) + '\n') # Size
+    serialPort.write(COMMAND_PROG) 
+    serialPort.write(bytes(str(startAddr) + ' ', 'utf-8')) # Address
+    serialPort.write(bytes(str(maxAddr-startAddr+1) + '\n', 'utf-8')) # Size
+    serialPort.flush()
+    message = serialPort.readline()
     
-    sio.flush()
-    
-    message = sio.readline()
-    
-    if(message != 'Receiving the application image\n'):
+    if(message != b'Receiving the application image\n'):
         print("Error sending the program command")
         sys.exit(0)
     
@@ -62,12 +58,12 @@ with serial.Serial(port = "COM3", baudrate=921600,
             data = 0xff
         
         #send data
-        sio.write([data])
-        sio.flush()
+        serialPort.write([data])
+        serialPort.flush()
         addr +=1
     
     # Verify receiving the image
-    message = sio.readline()
+    message = serialPort.readline()
     if(message == COMMAND_PROG_DONE):
         print("Image sent successfully")
     else:
@@ -78,9 +74,8 @@ with serial.Serial(port = "COM3", baudrate=921600,
     endTm = time.time()
     
     # Jump to the written image    
-    sio.write(COMMAND_JUMP)
-    sio.write(str(startAddr) + '\n') # Address
-    sio.flush()
+    serialPort.write(COMMAND_JUMP)
+    serialPort.write(bytes(str(startAddr) + '\n', 'utf-8')) # Address
     print("Jumped to the new image")
 
 
