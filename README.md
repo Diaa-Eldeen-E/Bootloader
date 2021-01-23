@@ -1,4 +1,4 @@
-## **Bootloader built for Tiva c TM4C1294NCPDT microcontroller**
+## **Bootloader built for ARM Cortex-M4 microcontrollers**
 
 ### **Features**
 
