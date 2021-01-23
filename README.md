@@ -8,3 +8,4 @@
 - Flash memory blocks access control (Read/Write/Exectue).
 - Load hex files into the flash memory and run it.
 - Error checking.
+- Python script for flashing the microcontroller.
