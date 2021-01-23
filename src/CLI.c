@@ -20,7 +20,7 @@ command_t const gCommandTable[] =
 	{"WRITE", "[Write [address] [data]] Write a word in flash",	command_FLASH_WRITE},
 	{"READ", "[Read [address]] Read a word from flash", command_FLASH_READ},
 	{"WRITE_PROTECTION", "[Write_Protection [address]] Set a 2 KB block at \
-			this address to read only",	command_FLASH_WriteProtection},
+this address to read only",	command_FLASH_WriteProtection},
 	{"PROG", "[PROG [address] [size]] Flash a hex file to the MCU",	command_ReceiveBin},
 	{"JUMP", "[Jump [address]] Jump to the specified address", command_Jump},
     {NULL,      NULL }
