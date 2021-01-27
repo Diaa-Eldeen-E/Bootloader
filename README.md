@@ -2,10 +2,8 @@
 
 ### **Features**
 
-- UART communication (Easily portable to any other communication protocol).
-- Command line interface
-- Read/Write/Erase from flash operations.
-- Flash memory blocks access control (Read/Write/Exectue).
-- Load hex files into the flash memory and run it.
+- Command line interface (UART communication).
+- Python script for flashing hex files to the microcontroller.
+- Read, write and erase flash memory operations.
+- Flash memory regions access control (MPU).
 - Error checking.
-- Python script for flashing the microcontroller.
